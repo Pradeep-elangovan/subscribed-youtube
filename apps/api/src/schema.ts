@@ -1,5 +1,6 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
+// The database schema as a string so it ships inside the compiled code (no file lookups at runtime,
+// which matters on Vercel). Every statement is idempotent, so it is safe to run on every cold start.
+export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS users (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   google_sub  text UNIQUE NOT NULL,
@@ -12,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Channels are shared across users: one poll serves every subscriber.
 CREATE TABLE IF NOT EXISTS channels (
-  id              text PRIMARY KEY,            -- YouTube channel id (UC...)
+  id              text PRIMARY KEY,
   title           text NOT NULL,
   thumbnail       text,
   last_polled_at  timestamptz,
@@ -29,12 +30,12 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE INDEX IF NOT EXISTS subscriptions_channel_idx ON subscriptions (channel_id);
 
 CREATE TABLE IF NOT EXISTS videos (
-  id            text PRIMARY KEY,              -- YouTube video id
+  id            text PRIMARY KEY,
   channel_id    text NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   title         text NOT NULL,
   published_at  timestamptz NOT NULL,
   thumbnail     text,
-  is_short      boolean,                       -- NULL = not classified yet
+  is_short      boolean,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS videos_channel_published_idx ON videos (channel_id, published_at DESC, id DESC);
@@ -49,3 +50,4 @@ CREATE TABLE IF NOT EXISTS watch_state (
   updated_at        timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, video_id)
 );
+`;

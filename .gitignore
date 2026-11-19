@@ -9,3 +9,4 @@ build/
 .expo/
 android/.gradle/
 coverage/
+.vercel

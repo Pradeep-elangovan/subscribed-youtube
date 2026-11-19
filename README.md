@@ -57,6 +57,25 @@ npx expo start --dev-client
 - Android sign-in also needs an **Android** OAuth client in Google Cloud (package `com.subscribedyoutube.app` plus your signing certificate's SHA-1). The app itself only needs the **Web** client ID, which must also be in the API's `GOOGLE_CLIENT_IDS`.
 - Get the debug SHA-1 with `cd apps/mobile/android && ./gradlew signingReport`, or `eas credentials` for EAS builds.
 
+## Deploy on Vercel (two projects, one repo)
+
+Create two Vercel projects from this repo, each with a different **Root Directory**.
+
+**API** (Root Directory `apps/api`, framework preset: Other). Add a Postgres database (Vercel Marketplace, Neon) and connect it to this project; that sets `DATABASE_URL`. Then set:
+
+| Variable | Value |
+| --- | --- |
+| `JWT_SECRET` | long random string |
+| `GOOGLE_CLIENT_IDS` | the Web OAuth client ID (add the Android one later) |
+| `CORS_ORIGINS` | the web project's URL, e.g. `https://subscribed.vercel.app` |
+| `CRON_SECRET` | long random string |
+
+Tables are created automatically on the first request.
+
+**Web** (Root Directory `apps/web`, framework preset: Vite). Set `VITE_API_URL` (the API project's URL) and `VITE_GOOGLE_CLIENT_ID`, then redeploy, because Vite bakes these in at build time.
+
+**Keeping feeds fresh.** Vercel has no background process, so something has to call `GET /cron/poll` with the header `Authorization: Bearer <CRON_SECRET>`. `apps/api/vercel.json` registers a daily Vercel Cron (the most the free plan allows). For every 15 minutes, add a free job at cron-job.org that sends that header. Each call refreshes up to 150 channels within a time limit, and importing subscriptions also refreshes the first 40 channels right away.
+
 ### Google OAuth setup
 
 1. In Google Cloud Console create an OAuth consent screen and two OAuth client IDs: **Web** and **Android**.

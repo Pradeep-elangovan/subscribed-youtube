@@ -5,10 +5,16 @@ import { detectShort } from '../lib/shorts.js';
 
 const CONCURRENCY = 5;
 
-async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+/** Runs fn over items with limited concurrency. Stops starting new items once the deadline has passed. */
+async function mapLimit<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+  deadline = Infinity,
+): Promise<void> {
   let next = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (next < items.length) {
+    while (next < items.length && Date.now() < deadline) {
       const item = items[next++]!;
       await fn(item);
     }
@@ -40,28 +46,39 @@ async function pollChannel(channelId: string): Promise<void> {
   }
 }
 
-/** Polls the given channels right away (used after an import so the feed fills quickly). */
-export async function pollChannels(channelIds: string[]): Promise<void> {
-  await mapLimit(channelIds, CONCURRENCY, pollChannel);
-  await classifyShorts();
-}
-
 /** Classifies recent videos whose Short/regular status is still unknown. */
-export async function classifyShorts(limit = 300): Promise<void> {
+export async function classifyShorts(limit = 300, deadline = Infinity): Promise<void> {
   const pending = await query<{ id: string }>(
     `SELECT id FROM videos
      WHERE is_short IS NULL AND created_at > now() - interval '7 days'
      ORDER BY created_at DESC LIMIT $1`,
     [limit],
   );
-  await mapLimit(pending, CONCURRENCY, async ({ id }) => {
-    const result = await detectShort(id);
-    if (result !== null) await query(`UPDATE videos SET is_short = $2 WHERE id = $1`, [id, result]);
-  });
+  await mapLimit(
+    pending,
+    CONCURRENCY,
+    async ({ id }) => {
+      const result = await detectShort(id);
+      if (result !== null) await query(`UPDATE videos SET is_short = $2 WHERE id = $1`, [id, result]);
+    },
+    deadline,
+  );
 }
 
-/** One polling pass: refresh every subscribed channel that hasn't been polled recently. */
-export async function pollOnce(batchSize = 200): Promise<void> {
+/**
+ * Polls the given channels, then classifies new videos. With a time budget it stops starting new work
+ * when time is up; channels it skipped stay "due" and are picked up by the next pollOnce().
+ */
+export async function pollChannels(channelIds: string[], budgetMs = Infinity): Promise<void> {
+  const deadline = Date.now() + budgetMs;
+  await mapLimit(channelIds, CONCURRENCY, pollChannel, deadline);
+  await classifyShorts(300, deadline);
+}
+
+/** One polling pass: refresh subscribed channels that haven't been polled recently (never-polled ones first). */
+export async function pollOnce(opts: { batchSize?: number; budgetMs?: number } = {}): Promise<{ due: number }> {
+  const { batchSize = 200, budgetMs = Infinity } = opts;
+  const deadline = Date.now() + budgetMs;
   const due = await query<{ id: string }>(
     `SELECT c.id FROM channels c
      WHERE EXISTS (SELECT 1 FROM subscriptions s WHERE s.channel_id = c.id)
@@ -71,12 +88,14 @@ export async function pollOnce(batchSize = 200): Promise<void> {
      LIMIT $1`,
     [batchSize, config.pollIntervalMinutes],
   );
-  if (due.length > 0) {
-    console.log(`[poller] refreshing ${due.length} channel(s)`);
-    await pollChannels(due.map((c) => c.id));
-  }
+  if (due.length > 0) console.log(`[poller] refreshing ${due.length} channel(s)`);
+  await mapLimit(due, CONCURRENCY, ({ id }) => pollChannel(id), deadline);
+  // Always classify, so videos left unclassified by an earlier timed-out pass get caught up.
+  await classifyShorts(300, deadline);
+  return { due: due.length };
 }
 
+/** Long-running servers only. On Vercel, call GET /cron/poll from a scheduler instead. */
 export function startPoller(): () => void {
   let running = false;
   const tick = async () => {

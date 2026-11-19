@@ -27,8 +27,17 @@ async function saveSubscriptions(userId: string, channels: ImportedWithThumb[]):
       );
     }
   });
-  // Fill the feed in the background; the request doesn't wait for it.
-  void pollChannels(channels.map((c) => c.id)).catch((err) => console.error('[import] poll failed', err));
+  // Fill the first channels' feeds now, within a few seconds. Serverless functions are frozen once the
+  // response is sent, so background work would be lost. Channels not reached stay "never polled" and the
+  // scheduled refresh (/cron/poll, or the built-in poller on a long-running server) picks them up first.
+  try {
+    await pollChannels(
+      channels.slice(0, 40).map((c) => c.id),
+      8_000,
+    );
+  } catch (err) {
+    console.error('[import] initial poll failed', err);
+  }
   return channels.length;
 }
 
