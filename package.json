@@ -14,7 +14,10 @@
     "api:typecheck": "npm run typecheck -w @subtube/api",
     "web:dev": "npm run dev -w @subtube/web",
     "web:build": "npm run build -w @subtube/web",
-    "web:typecheck": "npm run typecheck -w @subtube/web"
+    "web:typecheck": "npm run typecheck -w @subtube/web",
+    "mobile:start": "npm run start -w @subtube/mobile",
+    "mobile:android": "npm run android -w @subtube/mobile",
+    "mobile:typecheck": "npm run typecheck -w @subtube/mobile"
   },
   "engines": {
     "node": ">=20.6"

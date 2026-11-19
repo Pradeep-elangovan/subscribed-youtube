@@ -7,8 +7,8 @@ A YouTube-style client that shows videos **only from the channels you subscribe 
 ```
 apps/api          Hono + Postgres API, feed poller          (built)
 apps/web          React PWA (Vite)                           (built)
-apps/mobile       React Native (Expo) Android app            (after web)
-packages/shared   TypeScript types shared by all apps
+apps/mobile       React Native (Expo) Android app            (built)
+packages/shared   Types and the API client shared by web and Android
 ```
 
 ## How it works
@@ -38,6 +38,24 @@ npm run web:dev                          # http://localhost:5173
 ```
 
 In Google Cloud Console, add `http://localhost:5173` as an authorised JavaScript origin on the Web client, and add the same origin to the API's `CORS_ORIGINS`. In production the app is installable as a PWA.
+
+## Run the Android app
+
+The app uses native Google sign-in, so it needs a development build (it does not run in Expo Go). You need the Android SDK or an EAS account.
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env   # API URL + the Web client ID
+npm install
+npx expo install --fix --cwd apps/mobile       # aligns native package versions with your Expo SDK
+cd apps/mobile
+npx expo run:android                           # local build on an emulator or device
+# or: eas build --profile development --platform android
+npx expo start --dev-client
+```
+
+- From the emulator the API on your computer is `http://10.0.2.2:8787`. On a real phone use your computer's LAN IP or a deployed https URL. Plain http is only allowed in non-production builds.
+- Android sign-in also needs an **Android** OAuth client in Google Cloud (package `com.subscribedyoutube.app` plus your signing certificate's SHA-1). The app itself only needs the **Web** client ID, which must also be in the API's `GOOGLE_CLIENT_IDS`.
+- Get the debug SHA-1 with `cd apps/mobile/android && ./gradlew signingReport`, or `eas credentials` for EAS builds.
 
 ### Google OAuth setup
 
@@ -69,6 +87,6 @@ All routes except `/health` and `/auth/google` need `Authorization: Bearer <toke
 
 - [x] API: auth, import, feed polling, Shorts detection, watch state, search
 - [x] Web PWA: sign-in, feed + Shorts tab, search, groups, channels/import, watch page, watch later, settings
-- [ ] Android app (Expo)
+- [x] Android app (Expo): same features as web, native Google sign-in
 - [ ] Livestream filter (RSS doesn't flag lives; needs a per-video lookup)
 - [ ] Rate limiting, notifications, daily digest, keyboard shortcuts

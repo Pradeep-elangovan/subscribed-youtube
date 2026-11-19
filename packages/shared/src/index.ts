@@ -49,3 +49,5 @@ export interface VideoStatePatch {
   watchLater?: boolean;
   progressSeconds?: number;
 }
+
+export * from "./client";
