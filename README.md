@@ -6,7 +6,7 @@ A YouTube-style client that shows videos **only from the channels you subscribe 
 
 ```
 apps/api          Hono + Postgres API, feed poller          (built)
-apps/web          React PWA (Vite)                           (next)
+apps/web          React PWA (Vite)                           (built)
 apps/mobile       React Native (Expo) Android app            (after web)
 packages/shared   TypeScript types shared by all apps
 ```
@@ -29,6 +29,15 @@ npm install
 npm run api:migrate
 npm run api:dev
 ```
+
+## Run the web app
+
+```bash
+cp apps/web/.env.example apps/web/.env   # set VITE_GOOGLE_CLIENT_ID (the Web client ID)
+npm run web:dev                          # http://localhost:5173
+```
+
+In Google Cloud Console, add `http://localhost:5173` as an authorised JavaScript origin on the Web client, and add the same origin to the API's `CORS_ORIGINS`. In production the app is installable as a PWA.
 
 ### Google OAuth setup
 
@@ -53,12 +62,13 @@ All routes except `/health` and `/auth/google` need `Authorization: Bearer <toke
 | DELETE | `/subscriptions/:channelId` | Unsubscribe in this app |
 | GET | `/feed` | `tab=videos\|shorts`, `channel`, `group`, `q` (search), `hideWatched`, `cursor`. `nextCursor: null` = caught up |
 | PUT | `/videos/:id/state` | `{ watched?, watchLater?, progressSeconds? }` |
+| GET | `/videos/:id` | One video from your subscriptions |
 | GET | `/watch-later` | Saved videos |
 
 ## Roadmap
 
 - [x] API: auth, import, feed polling, Shorts detection, watch state, search
-- [ ] Web PWA
+- [x] Web PWA: sign-in, feed + Shorts tab, search, groups, channels/import, watch page, watch later, settings
 - [ ] Android app (Expo)
 - [ ] Livestream filter (RSS doesn't flag lives; needs a per-video lookup)
 - [ ] Rate limiting, notifications, daily digest, keyboard shortcuts

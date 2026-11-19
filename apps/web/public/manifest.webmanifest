@@ -1,0 +1,12 @@
+{
+  "name": "Subscribed",
+  "short_name": "Subscribed",
+  "description": "Only the videos from channels you subscribe to.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f10",
+  "theme_color": "#0f0f10",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

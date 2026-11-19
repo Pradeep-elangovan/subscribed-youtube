@@ -11,7 +11,10 @@
     "api:dev": "npm run dev -w @subtube/api",
     "api:migrate": "npm run migrate -w @subtube/api",
     "api:build": "npm run build -w @subtube/api",
-    "api:typecheck": "npm run typecheck -w @subtube/api"
+    "api:typecheck": "npm run typecheck -w @subtube/api",
+    "web:dev": "npm run dev -w @subtube/web",
+    "web:build": "npm run build -w @subtube/web",
+    "web:typecheck": "npm run typecheck -w @subtube/web"
   },
   "engines": {
     "node": ">=20.6"

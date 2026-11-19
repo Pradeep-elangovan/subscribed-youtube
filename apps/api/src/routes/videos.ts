@@ -42,6 +42,17 @@ videoRoutes.put('/videos/:id/state', async (c) => {
   return c.body(null, 204);
 });
 
+// One video (for deep links to the watch page). Only videos from the user's subscriptions.
+videoRoutes.get('/videos/:id', async (c) => {
+  const rows = await query(`${VIDEO_SELECT} WHERE s.user_id = $1 AND v.id = $2 LIMIT 1`, [
+    c.get('userId'),
+    c.req.param('id'),
+  ]);
+  const row = (rows as Parameters<typeof toVideo>[0][])[0];
+  if (!row) return c.json({ error: 'Video not found in your subscriptions' }, 404);
+  return c.json(toVideo(row));
+});
+
 videoRoutes.get('/watch-later', async (c) => {
   const rows = await query(
     `${VIDEO_SELECT}
