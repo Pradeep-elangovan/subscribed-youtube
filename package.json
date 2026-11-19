@@ -1,0 +1,19 @@
+{
+  "name": "subscribed-youtube",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A YouTube-style client that only shows videos from channels you subscribe to.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "api:dev": "npm run dev -w @subtube/api",
+    "api:migrate": "npm run migrate -w @subtube/api",
+    "api:build": "npm run build -w @subtube/api",
+    "api:typecheck": "npm run typecheck -w @subtube/api"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
